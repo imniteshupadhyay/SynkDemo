@@ -1,0 +1,150 @@
+package com.playmotech.api.core.repo;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.playmotech.api.core.dao_postgres.PickleballMatch;
+import com.playmotech.api.core.dao_postgres.PickleballMatchPlayDetail;
+import com.playmotech.api.core.dao_postgres.PlayerStats;
+import com.playmotech.api.core.dao_postgres.TeamStats;
+import com.playmotech.api.core.dao_postgres.TournamentStats;
+import com.playmotech.api.core.dto.PlayerMatchStatsDto;
+
+public interface PickleballMatchPlayDetailRepo extends JpaRepository<PickleballMatchPlayDetail, Long> {
+
+    @Query("""
+                      SELECT new com.playmotech.api.core.dao_postgres.TournamentStats(
+                        COALESCE(bmpd.winningPlayerUserProfile.id, bmpd.winningTeam.id, bmpd.winningGuestPlayerName) as participantId,
+                        CASE
+                            WHEN bmpd.winningPlayerUserProfile IS NOT NULL THEN 'PLAYER'
+                            WHEN bmpd.winningTeam IS NOT NULL THEN 'TEAM'
+                            ELSE 'GUEST'
+                        END as participantType,
+                        COUNT(DISTINCT bmpd.id) as matchesWon,
+                        COUNT(DISTINCT bmr.id) as roundsWon,
+                        SUM(bmrpd.score) as totalPoints)
+                      FROM PickleballMatchPlayDetail bmpd
+                      LEFT JOIN bmpd.pickleballMatchRounds bmr
+                      LEFT JOIN bmr.pickleballMatchRoundsPlayDetails bmrpd
+                      WHERE bmpd.tournament.id = :tournamentId
+                      GROUP BY 
+                                  COALESCE(bmpd.winningPlayerUserProfile.id, bmpd.winningTeam.id, bmpd.winningGuestPlayerName),
+                                  CASE
+                                      WHEN bmpd.winningPlayerUserProfile IS NOT NULL THEN 'PLAYER'
+                                      WHEN bmpd.winningTeam IS NOT NULL THEN 'TEAM'
+                                      ELSE 'GUEST'
+                                  END
+            """)
+    List<TournamentStats> findTournamentStats(@Param("tournamentId") String tournamentId);
+
+    @Query("""
+                     SELECT new com.playmotech.api.core.dao_postgres.PlayerStats(
+                                 up.id as playerId,
+                                 COUNT(DISTINCT bmpd.id) as matchesWon,
+                                 COUNT(DISTINCT bmr.id) as roundsWon,
+                                 (SELECT COUNT(DISTINCT bmr2.id)
+                                     FROM PickleballMatchRound bmr2
+                                     JOIN bmr2.pickleballMatchRoundsPlayDetails bmrpd2
+                                     WHERE bmrpd2.playerUserProfile.id = :playerId) as totalRoundsPlayed,
+                                 SUM(bmrpd.score) as totalPoints
+                                 )
+                     FROM UserProfile up
+                     LEFT JOIN PickleballMatchPlayDetail  bmpd ON bmpd.winningPlayerUserProfile.id = up.id
+                     LEFT JOIN bmpd.pickleballMatchRounds bmr
+                     LEFT JOIN bmr.pickleballMatchRoundsPlayDetails bmrpd ON bmrpd.playerUserProfile.id = up.id
+                     WHERE up.id = :playerId
+            GROUP BY up.id
+            """)
+    PlayerStats findPlayerStats(@Param("playerId") String playerId);
+
+    @Query("""
+            SELECT new com.playmotech.api.core.dao_postgres.TeamStats(
+                t.id as teamId,
+                                     COUNT(DISTINCT CASE WHEN bmpd.winningTeam.id = :teamId THEN bmpd.id END) as matchesWon,
+                                     COUNT(DISTINCT CASE WHEN bmrpd.team.id = :teamId THEN bmr.id END) as totalRoundsPlayed,
+                                     COALESCE(SUM(CASE WHEN bmrpd.team.id = :teamId THEN bmrpd.score END), 0) as totalPoints,
+                                     COALESCE(MAX(CASE WHEN bmrpd.team.id = :teamId THEN bmrpd.score END), 0) as highestScore)
+                                 FROM Team t
+                                 LEFT JOIN PickleballMatchPlayDetail bmpd ON bmpd.winningTeam.id = t.id\s
+                                     OR bmpd.id IN (
+                                         SELECT DISTINCT bmpd2.id\s
+                                         FROM PickleballMatchPlayDetail bmpd2\s
+                                         JOIN bmpd2.pickleballMatchRounds bmr2\s
+                                         JOIN bmr2.pickleballMatchRoundsPlayDetails bmrpd2\s
+                                         WHERE bmrpd2.team.id = :teamId
+                                     )
+                                 LEFT JOIN bmpd.pickleballMatchRounds bmr
+                                 LEFT JOIN bmr.pickleballMatchRoundsPlayDetails bmrpd
+                                 WHERE t.id = :teamId
+                                 GROUP BY t.id
+            """)
+    TeamStats findTeamStats(@Param("teamId") String teamId);
+
+    @Query(value = """
+            SELECT new com.playmotech.api.core.dto.PlayerMatchStatsDto(
+                :playerUserId,
+                COUNT(DISTINCT bm.id),
+                SUM(CASE
+                    WHEN bmpd.winningPlayerUserProfile.id = :playerUserId
+                         OR (bmtp.id IS NOT NULL AND bmpd.winningTeam.id = bmtp.team.id)
+                    THEN 1
+                    ELSE 0
+                END),
+                SUM(CASE
+                    WHEN COALESCE(bmpd.isTied, false) = false
+                         AND (
+                           (bmpd.winningPlayerUserProfile.id IS NOT NULL AND bmpd.winningPlayerUserProfile.id != :playerUserId)
+                           OR (bmpd.winningGuestPlayerName IS NOT NULL)
+                           OR (bmpd.winningTeam.id IS NOT NULL AND (bmtp.id IS NULL OR bmpd.winningTeam.id <> bmtp.team.id))
+                         )
+                    THEN 1
+                    ELSE 0
+                END),
+                SUM(CASE
+                    WHEN COALESCE(bmpd.isTied, false) = true
+                    THEN 1
+                    ELSE 0
+                END),
+                SUM(CASE
+                    WHEN bmpd.winningPlayerUserProfile.id IS NULL
+                         AND bmpd.winningGuestPlayerName IS NULL
+                         AND bmpd.winningTeam.id IS NULL
+                         AND COALESCE(bmpd.isTied, false) = false
+                    THEN 1
+                    ELSE 0
+                END)
+            )
+            FROM PickleballMatch bm
+            LEFT JOIN PickleballSinglesPlayerMapping bspm ON bspm.pickleballMatch.id = bm.id AND bspm.playerUserProfile.id = :playerUserId
+            LEFT JOIN PickleballMatchTeamPlayerMapping bmtp ON bmtp.pickleballMatch.id = bm.id AND bmtp.playerUserProfile.id = :playerUserId
+            LEFT JOIN PickleballMatchPlayDetail bmpd ON bm.id = bmpd.pickleballMatch.id
+            WHERE (bspm.id IS NOT NULL OR bmtp.id IS NOT NULL)
+            AND bm.matchStatus = 'ENDED'
+            AND COALESCE(bm.inactive, false) = false
+            """)
+    PlayerMatchStatsDto getPlayerMatchStatistics(@Param("playerUserId") String playerUserId);
+
+    @Query("""
+            SELECT bm
+            FROM PickleballMatch bm
+            LEFT JOIN PickleballSinglesPlayerMapping bspm ON bspm.pickleballMatch.id = bm.id AND bspm.playerUserProfile.id = :userId
+            LEFT JOIN PickleballMatchTeamPlayerMapping bmtp ON bmtp.pickleballMatch.id = bm.id AND bmtp.playerUserProfile.id = :userId
+            LEFT JOIN PickleballMatchPlayDetail bmpd ON bm.id = bmpd.pickleballMatch.id
+            WHERE (bspm.id IS NOT NULL OR bmtp.id IS NOT NULL)
+            AND bm.matchStatus = 'ENDED'
+            AND COALESCE(bm.inactive, false) = false
+            AND (
+                bmpd.isTied = true
+                OR bmpd.winningPlayerUserProfile IS NOT NULL
+                OR bmpd.winningTeam IS NOT NULL
+            )
+            ORDER BY bm.createdAtTimestampUtc DESC
+            """)
+    List<PickleballMatch> findCompletedMatchesForUser(@Param("userId") String userId);
+
+    Optional<PickleballMatchPlayDetail> findByPickleballMatch_Id(String matchId);
+}

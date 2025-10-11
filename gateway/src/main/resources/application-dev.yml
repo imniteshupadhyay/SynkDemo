@@ -1,0 +1,45 @@
+server:
+  port: 7008
+  compression:
+    enabled: true
+
+spring:
+  application:
+    name: PLAYMO-GATEWAY
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_FIRST
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          "[/**]":
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+      routes:
+        # No filters to prevent header manipulation during WebSocket handshake
+        - id: sports-api-websocket
+          uri: ws://localhost:8090
+          predicates:
+            - Path=/sports/ws/**
+        - id: sports-api-core
+          uri: http://localhost:8090
+          predicates:
+            - Path=/sports/**
+          filters:
+            - RemoveResponseHeader=Vary
+        - id: sports-api-new
+          uri: http://localhost:7001
+          predicates:
+            - Path=/v2/sports/**
+          filters:
+            - RemoveResponseHeader=Vary
+
+logging:
+  file:
+    path: /home/ubuntu/playmo/logs/gateway
+  level:
+    root: INFO
+    "[org.springframework.web]": DEBUG
+    "[reactor.netty]": INFO

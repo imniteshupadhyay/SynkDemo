@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> </meta>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> </meta>
+    <title>Trainee Performance Report</title>
+    <style>
+        /* Reset some default styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body styles */
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 40px auto; /* Center the body content */
+            color: #333;
+            line-height: 1.6;
+            max-width: 800px; /* Restrict max-width for better readability */
+            background-color: #f4f4f4; /* Light background for contrast */
+            padding: 20px; /* Padding inside the body */
+            border-radius: 8px; /* Rounded corners for body */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        }
+
+        /* Image styles */
+        .report-image {
+            width: 100%; /* Make the image responsive */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 8px; /* Rounded corners for the image */
+            margin-bottom: 20px; /* Space below the image */
+        }
+
+        /* Box styles for table and chart */
+        .box {
+            border: 1px solid #ddd; /* Light grey border */
+            border-radius: 8px; /* Rounded corners for the box */
+            padding: 15px; /* Padding inside the box */
+            background-color: #fff; /* White background for the box */
+            margin-bottom: 30px; /* Space below each box */
+        }
+
+        /* Heading styles */
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            color: #4A90E2;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 5px;
+            border-left: 4px solid #4A90E2;
+            padding-left: 10px;
+            margin-top: 30px;
+        }
+
+        /* Highlight styles for name and score */
+        .highlight {
+            color: #FF6F61;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* Paragraph styles */
+        p {
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        /* Table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            table-layout: fixed;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+        }
+
+        td {
+            font-size: 13px;
+        }
+
+        /* Rating styles */
+        .rating {
+            font-weight: bold;
+            color: #FFCC00;
+        }
+
+        /* Centered text */
+        .centered {
+            text-align: center;
+        }
+
+
+        /* Canvas styles for doughnut charts */
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            width: 25%; /* Half width of the original */
+            height: 150px; /* Half height of the original */
+            margin-bottom: 30px; /* Space below each chart */
+        }
+        .score-text {
+           position: absolute;
+           top: 50%;
+           left: 50%;
+           transform: translate(-50%, -50%);
+           font-size: 20px;
+           font-weight: bold;
+           color: #333;
+
+        }
+
+        /* Notes styles */
+        .notes {
+            font-size: 14px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-left: 4px solid #4A90E2;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+
+        /* Footer styles */
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+
+        /* Canvas styles for doughnut charts */
+        .chart-container {
+            position: relative;
+            margin: auto;
+            width: 25%; /* Half width of the original */
+            height: 150px; /* Half height of the original */
+            margin-bottom: 30px; /* Space below each chart */
+        }
+
+        .score-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            body {
+                margin: 20px; /* Less margin on smaller screens */
+                padding: 10px; /* Reduce padding for smaller screens */
+            }
+
+            h1 {
+                font-size: 24px; /* Smaller heading size */
+            }
+
+            h2 {
+                font-size: 20px; /* Smaller subheading size */
+            }
+
+            table {
+                font-size: 12px; /* Smaller table font size */
+            }
+
+            th, td {
+                padding: 10px; /* Less padding in table cells */
+            }
+
+            .chart-container {
+                width: 90%; /* Full width for smaller screens */
+            }
+        }
+    </style>
+</head>
+<body>
+
+<img src="/opt/playmotech/sports-api/conf/badminton.png" alt="Trainee Performance Report" class="report-image"> </img><!-- Image added here -->
+
+<h1>Trainee Performance Report</h1>
+<p><strong>Name:</strong> <span class="highlight"> {{traineeName}} </span></p>
+<p><strong>Course:</strong> {{courseName}} </p>
+<p><strong>Academy:</strong> {{academyName}} </p>
+<p><strong>Coach:</strong> {{coachName}} </p>
+<p><strong>Sport:</strong> {{sport}}</p>
+<p><strong>Total Score:</strong> <span class="highlight"> {{scoreAchieved}} /  {{totalScore}} </span></p>
+{{table}}
+<h2>Level: {{level}}</h2>
+<div class="notes">
+    <h2>Coach's Notes:</h2>
+    <p>{{coachNotes}}</p>
+</div>
+<div class="notes">
+    <h2>Recommendations:</h2>
+    <p>{{recommendations}}</p>
+</div>
+
+<div class="footer">
+    <p>Report generated on: {{date}}</p>
+</div>
+
+</body>
+</html>

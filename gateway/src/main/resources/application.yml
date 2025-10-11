@@ -1,0 +1,54 @@
+server:
+  port: 7008
+  compression:
+    enabled: true
+
+logging:
+  file:
+    path: /home/ubuntu/playmo/logs/gateway
+  level:
+    root: INFO
+    "[org.springframework.web]": DEBUG
+    "[reactor.netty]": INFO
+#eureka:
+#  client:
+#    register-with-eureka: true
+#    fetch-registry: true
+#    service-url:
+#      defaultZone: http://localhost:8070/eureka/
+#  instance:
+#    hostname: localhost
+#    prefer-ip-address: true
+#    lease-renewal-interval-in-seconds: 10
+#    lease-expiration-duration-in-seconds: 20
+
+spring:
+  profiles:
+    active: ${ENV:local}
+  application:
+    name: PLAYMO-GATEWAY
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_FIRST
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          "[/**]":
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+      routes:
+          # No filters to prevent header manipulation during WebSocket handshake
+        - id: sports-api-websocket
+          uri: ws://localhost:8080
+          predicates:
+            - Path=/sports/ws/**
+        
+        - id: sports-api-core
+          uri: http://localhost:8080
+          predicates:
+            - Path=/sports/**
+          filters:
+            - RemoveResponseHeader=Access-Control-Allow-Origin
+            - RemoveResponseHeader=Vary
